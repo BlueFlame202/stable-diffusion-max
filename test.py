@@ -1,6 +1,6 @@
 import torch
 from transformers import CLIPTokenizer, CLIPTextModel
-from diffusers import EulerDiscreteScheduler, StableDiffusionXLPipeline
+from diffusers import EulerDiscreteScheduler, StableDiffusionPipeline
 
 from PIL import Image
 import numpy as np
@@ -12,7 +12,16 @@ from src.model_config import StableDiffusionConfig
 # --- SDXLConfig and Diffusers config only; MAX PipelineConfig is NOT used for SDXL ---
 
 # Load the full pipeline from HuggingFace
-pipe = StableDiffusionXLPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
+pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
+
+image = pipe(
+    prompt="A beautiful landscape painting",
+    negative_prompt="blurry",
+    height=512,
+    width=512,
+    num_inference_steps=50
+).images[0]
+image.save("output_landscape_huggingface_pipeline.png")
 
 # Extract UNet and VAE
 unet = pipe.unet
@@ -21,9 +30,9 @@ vae = pipe.vae
 # Instantiate your SDXLModel with all other components
 model = StableDiffusionModel(
     text_encoder=pipe.text_encoder,
-    text_encoder_2=pipe.text_encoder_2,
+    # text_encoder_2=pipe.text_encoder, # initially was trying to do SDXL
     tokenizer=pipe.tokenizer,
-    tokenizer_2=pipe.tokenizer_2,
+    # tokenizer_2=pipe.tokenizer, # initially was trying to do SDXL
     scheduler=pipe.scheduler,
     image_encoder=getattr(pipe, 'image_encoder', None),
     feature_extractor=getattr(pipe, 'feature_extractor', None),

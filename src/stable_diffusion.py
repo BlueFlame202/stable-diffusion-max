@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from transformers import CLIPTextModel, CLIPTextModelWithProjection, CLIPTokenizer, CLIPVisionModelWithProjection, CLIPImageProcessor
 from max.driver import Tensor
@@ -8,9 +9,9 @@ class StableDiffusionModel:
     def __init__(
         self,
         text_encoder: CLIPTextModel = None,
-        text_encoder_2: CLIPTextModelWithProjection = None,
+        # text_encoder_2: CLIPTextModelWithProjection = None,
         tokenizer: CLIPTokenizer = None,
-        tokenizer_2: CLIPTokenizer = None,
+        # tokenizer_2: CLIPTokenizer = None,
         scheduler=None,
         image_encoder: CLIPVisionModelWithProjection = None,
         feature_extractor: CLIPImageProcessor = None,
@@ -18,9 +19,9 @@ class StableDiffusionModel:
         device: str = "cuda",
     ):
         self.text_encoder = text_encoder
-        self.text_encoder_2 = text_encoder_2
+        # self.text_encoder_2 = text_encoder_2
         self.tokenizer = tokenizer
-        self.tokenizer_2 = tokenizer_2
+        # self.tokenizer_2 = tokenizer_2
         self.scheduler = scheduler
         self.image_encoder = image_encoder
         self.feature_extractor = feature_extractor
@@ -29,8 +30,8 @@ class StableDiffusionModel:
         # Move models to the correct device
         if self.text_encoder is not None:
             self.text_encoder = self.text_encoder.to(self.device)
-        if self.text_encoder_2 is not None:
-            self.text_encoder_2 = self.text_encoder_2.to(self.device)
+        # if self.text_encoder_2 is not None:
+        #     self.text_encoder_2 = self.text_encoder_2.to(self.device)
         # unet/vae will be loaded from model_config.py
 
     def encode_prompt(self, prompt, negative_prompt, device):
@@ -67,9 +68,10 @@ class StableDiffusionModel:
         self.scheduler.set_timesteps(num_inference_steps)
         timesteps = self.scheduler.timesteps
         # 4. Denoising loop
-        for t in timesteps:
+        for t in tqdm(timesteps):
             # MAX → PyTorch # TODO: use the ddpack thing to keep stuff on the same device
             latents_torch = torch.from_numpy(latents_max.to_numpy())
+            latents_torch = latents_torch / 0.18215 # scale the latents
             prompt_embeds_torch = torch.from_numpy(prompt_embeds_max.to_numpy())
             # Run UNet
             with torch.no_grad():
