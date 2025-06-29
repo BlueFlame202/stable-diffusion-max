@@ -14,14 +14,14 @@ from src.model_config import StableDiffusionConfig
 # Load the full pipeline from HuggingFace
 pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
 
-image = pipe(
-    prompt="A beautiful landscape painting",
-    negative_prompt="blurry",
-    height=512,
-    width=512,
-    num_inference_steps=50
-).images[0]
-image.save("output_landscape_huggingface_pipeline.png")
+# image = pipe(
+#     prompt="A beautiful landscape painting",
+#     negative_prompt="blurry",
+#     height=512,
+#     width=512,
+#     num_inference_steps=50
+# ).images[0]
+# image.save("output_landscape_huggingface_pipeline.png")
 
 # Extract UNet and VAE
 unet = pipe.unet
@@ -56,9 +56,14 @@ if __name__ == "__main__":
       
     # Convert MAX tensor to numpy, then to PIL Image
     result_np = result.to_numpy()
-    
+    print("Result min/max before normalization:", np.nanmin(result_np), np.nanmax(result_np))
+    if np.isnan(result_np).any():
+        print("NaNs detected in result before normalization!")
     # Normalize to 0-255 range and convert to uint8
     result_np = ((result_np + 1) * 127.5).clip(0, 255).astype(np.uint8)
+    print("Result min/max after normalization:", np.nanmin(result_np), np.nanmax(result_np))
+    if np.isnan(result_np).any():
+        print("NaNs detected in result after normalization!")
     
     # Convert to PIL Image (assuming shape is [1, 3, H, W] or [3, H, W])
     if result_np.shape[0] == 1:

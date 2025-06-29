@@ -69,10 +69,16 @@ class StableDiffusionModel:
         timesteps = self.scheduler.timesteps
         # 4. Denoising loop
         for t in tqdm(timesteps):
-            # MAX → PyTorch # TODO: use the ddpack thing to keep stuff on the same device
-            latents_torch = torch.from_numpy(latents_max.to_numpy())
-            latents_torch = latents_torch / 0.18215 # scale the latents
-            prompt_embeds_torch = torch.from_numpy(prompt_embeds_max.to_numpy())
+            # MAX → PyTorch # TODO: use the dlpack thing to keep stuff on the same device
+            latents_torch = torch.from_dlpack(latents_max)
+            print("Latents before scaling min/max:", latents_torch.min().item(), latents_torch.max().item())
+            if torch.isnan(latents_torch).any():
+                print("NaNs detected in latents before scaling!")
+            latents_torch = latents_torch / 0.18215  # crucial for SD v1.x
+            print("Latents after scaling min/max:", latents_torch.min().item(), latents_torch.max().item())
+            if torch.isnan(latents_torch).any():
+                print("NaNs detected in latents after scaling!")
+            prompt_embeds_torch = torch.from_dlpack(prompt_embeds_max)
             # Run UNet
             with torch.no_grad():
                 noise_pred = self.unet(
@@ -81,19 +87,16 @@ class StableDiffusionModel:
                     encoder_hidden_states=prompt_embeds_torch,
                 ).sample
             # PyTorch → MAX
-            noise_pred_max = Tensor.from_numpy(noise_pred.cpu().numpy())
+            noise_pred_max = Tensor.from_dlpack(noise_pred)
             # Scheduler step (PyTorch or MAX)
-            latents_np = latents_torch.cpu().numpy()
-            noise_pred_np = noise_pred.cpu().numpy()
-            latents_np = self.scheduler.step(
-                torch.tensor(noise_pred_np),
-                torch.tensor(t),
-                torch.tensor(latents_np)
-            )[0].numpy()
-            latents_max = Tensor.from_numpy(latents_np)
+            latents_torch = self.scheduler.step(noise_pred, t, latents_torch)[0]
+            latents_max = Tensor.from_dlpack(latents_torch)
         # 5. VAE decode
-        latents_torch = torch.from_numpy(latents_max.to_numpy())
+        latents_torch = torch.from_dlpack(latents_max)
         with torch.no_grad():
             image = self.vae.decode(latents_torch).sample
+        print("Image min/max:", image.min().item(), image.max().item())
+        if torch.isnan(image).any():
+            print("NaNs detected in VAE output!")
         image_max = Tensor.from_numpy(image.cpu().numpy())
         return image_max
