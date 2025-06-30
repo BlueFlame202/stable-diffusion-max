@@ -20,7 +20,7 @@ So far, this has involved:
 - One of the big hurdles was figuring out how memory worked, as well as (slightly embarrassingly) getting confused over documentation, since I was working with the Nightly version.
 - Mojo’s low-level control and MAX’s layout system are exciting, but take time to get used to—especially when working with large, complex models like SDXL.
 - I didn’t yet get to implementing actual Mojo kernels or fully hooking up the graphs, but the structure is in place to support future iterations.
-Despite following diffusers/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py at main · huggingface/diffusers · GitHub for inspiration (originally was trying to build SDXL), faced issues with NaN values when trying to code a simpler version.
+Despite following [the HuggingFace SDXL pipeline](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py) for inspiration (originally was trying to build SDXL), faced issues with NaN values when trying to code a simpler version.
 
 **What’s Next:**
 - Debugging the NaNs and confirming basic correctness with small test cases.
