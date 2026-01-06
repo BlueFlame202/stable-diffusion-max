@@ -8,6 +8,7 @@ pixi run python test.py
 ```
 
 **Project Status:** Unfinished
+**Latest Update:** January 5th, 2026: Fully completed a working MAX wrapper. Now, I will progressively replace components of torch and transformers code.
 
 Over the course of the hackathon, I started exploring what it would take to bring Stable Diffusion (SDXL) inference to the MAX platform. I am quite new to hackathons, GPU programming, and everything, so the final implementation is still in early stages and not producing valid outputs yet (currently returning NaNs). The goal was to begin mapping out the architecture and figure out integration points between PyTorch-style models and MAX graphs.
 
@@ -23,7 +24,7 @@ So far, this has involved:
 Despite following [the HuggingFace SDXL pipeline](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py) for inspiration (originally was trying to build SDXL), faced issues with NaN values when trying to code a simpler version.
 
 **What’s Next:**
-- Debugging the NaNs and confirming basic correctness with small test cases.
+- Debugging the NaNs and confirming basic correctness with small test cases. ✅
 - Gradually replacing components with native MAX graphs and Mojo kernels for performance.
 - Wrapping tests and benchmarking into Pixi tasks to streamline reproducibility and validation.
 
