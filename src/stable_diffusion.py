@@ -46,7 +46,7 @@ class StableDiffusionModel:
 
     def prepare_latents(self, batch_size, channels, height, width, dtype):
         latents = np.random.randn(batch_size, channels, height, width).astype(dtype)
-        latents = latents * self.scheduler.init_noise_sigma  # supposedly crucial for SD v1.x
+        latents = latents * self.scheduler.init_noise_sigma # supposedly crucial for SD v1.x
         return Tensor.from_numpy(latents)
 
     def execute(
@@ -86,11 +86,11 @@ class StableDiffusionModel:
             # PyTorch → MAX
             # noise_pred_max = Tensor.from_dlpack(noise_pred)
             # Scheduler step (PyTorch or MAX)
-            latents_torch = self.scheduler.step(noise_pred, t, latents_torch)[0]
+            latents_torch = self.scheduler.step(noise_pred, t, latents_torch).prev_sample # [0] # <- should be [0] when return_dict is False, but default is True https://huggingface.co/docs/diffusers/v0.36.0/en/api/schedulers/pndm#diffusers.schedulers.scheduling_utils.SchedulerOutput
             latents_max = Tensor.from_dlpack(latents_torch)
         # 5. VAE decode
         latents_torch = torch.from_dlpack(latents_max).to(self.device)
-        latents_torch = latents_torch / 0.18215 # / self.scheduler.init_noise_sigma # / 0.18215
+        latents_torch = latents_torch / 0.18215 # check why its division by 0.18215 that works here and not / self.scheduler.init_noise_sigma
         with torch.no_grad():
             image = self.vae.decode(latents_torch).sample
         print("Image min/max:", image.min().item(), image.max().item())
