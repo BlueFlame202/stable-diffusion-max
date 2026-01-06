@@ -46,6 +46,7 @@ class StableDiffusionModel:
 
     def prepare_latents(self, batch_size, channels, height, width, dtype):
         latents = np.random.randn(batch_size, channels, height, width).astype(dtype)
+        latents = latents / 0.18215  # supposedly crucial for SD v1.x
         return Tensor.from_numpy(latents)
 
     def execute(
@@ -63,7 +64,7 @@ class StableDiffusionModel:
         prompt_embeds_max = Tensor.from_numpy(prompt_embeds_np)
         negative_prompt_embeds_max = Tensor.from_numpy(negative_prompt_embeds_np)
         # 2. Prepare latents
-        latents_max = self.prepare_latents(batch_size, 4, height // 8, width // 8, np.float32)
+        latents_max = self.prepare_latents(batch_size, 4, height // 8, width // 8, np.float32) # TODO: want to try float16
         # 3. Prepare timesteps
         self.scheduler.set_timesteps(num_inference_steps)
         timesteps = self.scheduler.timesteps
@@ -74,7 +75,6 @@ class StableDiffusionModel:
             print("Latents before scaling min/max:", latents_torch.min().item(), latents_torch.max().item())
             if torch.isnan(latents_torch).any():
                 print("NaNs detected in latents before scaling!")
-            latents_torch = latents_torch / 0.18215  # crucial for SD v1.x
             print("Latents after scaling min/max:", latents_torch.min().item(), latents_torch.max().item())
             if torch.isnan(latents_torch).any():
                 print("NaNs detected in latents after scaling!")

@@ -3,7 +3,7 @@
 This is my project for the Modular hackathon. It sets up a wrapper around PyTorch instructions to initiate development to bring stable diffusion to MAX, with custom Mojo kernels.
 
 The code can be run using 
-```
+```zsh
 pixi run python test.py
 ```
 
@@ -36,7 +36,12 @@ Thanks to the hackathon organizers and community—looking forward to continuing
 ## Issues 
 
 Sometimes, for some reason the torch which is installed doesn't come with cuda. If this is the case, please run these commands:
-```
+```zsh
 pixi run python -m pip uninstall -y torch
 pixi run python -m pip install torch --index-url https://download.pytorch.org/whl/cu121
+```
+You might need to get `pip` first with
+```zsh
+pixi run python -m ensurepip --upgrade
+pixi run python -m pip install --upgrade pip
 ```
