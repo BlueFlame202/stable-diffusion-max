@@ -1,6 +1,6 @@
 import torch
 from transformers import CLIPTokenizer, CLIPTextModel
-from diffusers import EulerDiscreteScheduler, StableDiffusionPipeline
+from diffusers import StableDiffusionPipeline # EulerDiscreteScheduler
 
 from PIL import Image
 import numpy as np
@@ -11,21 +11,26 @@ from src.model_config import StableDiffusionConfig
 
 # --- SDXLConfig and Diffusers config only; MAX PipelineConfig is NOT used for SDXL ---
 
-# Load the full pipeline from HuggingFace
-pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4")
+device = "cuda"
 
-# image = pipe(
-#     prompt="A beautiful landscape painting",
-#     negative_prompt="blurry",
-#     height=512,
-#     width=512,
-#     num_inference_steps=50
-# ).images[0]
-# image.save("output_landscape_huggingface_pipeline.png")
+# Load the full pipeline from HuggingFace
+pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", dtype=torch.float32)
+pipe = pipe.to(device)
+
+image = pipe(
+    prompt="A beautiful landscape painting",
+    negative_prompt="blurry",
+    height=512,
+    width=512,
+    num_inference_steps=50
+).images[0]
+image.save("output_landscape_huggingface_pipeline.png")
 
 # Extract UNet and VAE
 unet = pipe.unet
 vae = pipe.vae
+
+print("scheduler:", pipe.scheduler)
 
 # Instantiate your SDXLModel with all other components
 model = StableDiffusionModel(
@@ -37,7 +42,7 @@ model = StableDiffusionModel(
     image_encoder=getattr(pipe, 'image_encoder', None),
     feature_extractor=getattr(pipe, 'feature_extractor', None),
     force_zeros_for_empty_prompt=True,
-    device="cuda"
+    device=device
 )
 # Set unet and vae as attributes
 model.unet = unet
@@ -48,8 +53,8 @@ if __name__ == "__main__":
     result = model.execute(
         prompt="A beautiful landscape painting",
         negative_prompt="blurry",
-        height=1024,
-        width=1024,
+        height=512,
+        width=512,
         num_inference_steps=50
     )
     print("Output tensor shape:", result.shape)  
