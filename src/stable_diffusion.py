@@ -1,30 +1,22 @@
-import numpy as np
-import torch
-from tqdm import tqdm
-
 from transformers import CLIPTextModel, CLIPTextModelWithProjection, CLIPTokenizer, CLIPVisionModelWithProjection, CLIPImageProcessor
 from max.driver import Tensor
 
-class CLIPTokenizer:
-    def __init__():
-        # TODO
-        pass
+from max.pipelines.lib import (
+    TextTokenizer,
+)
 
-    def from_weights():
-        # TODO
-        pass
+import numpy as np
+import torch
+import torch.nn.functional as F
 
-    def __call__():
-        # TODO
-        pass
-
+from tqdm import tqdm
 
 class StableDiffusionModel:
     def __init__(
         self,
         text_encoder: CLIPTextModel = None,
         # text_encoder_2: CLIPTextModelWithProjection = None,
-        tokenizer: CLIPTokenizer = None,
+        tokenizer: TextTokenizer = None,
         # tokenizer_2: CLIPTokenizer = None,
         scheduler=None,
         image_encoder: CLIPVisionModelWithProjection = None,
@@ -48,10 +40,12 @@ class StableDiffusionModel:
         #     self.text_encoder_2 = self.text_encoder_2.to(self.device)
         # unet/vae will be loaded from model_config.py
 
-    def encode_prompt(self, prompt, negative_prompt, device):
+    async def encode_prompt(self, prompt, negative_prompt, device):
         # Tokenize and encode with first encoder
-        prompt_tokens = self.tokenizer(prompt, return_tensors="pt", padding="max_length", max_length=77, truncation=True)
-        negative_prompt_tokens = self.tokenizer(negative_prompt, return_tensors="pt", padding="max_length", max_length=77, truncation=True)
+        prompt_tokens = await self.tokenizer.encode(prompt, add_special_tokens=True)
+        negative_prompt_tokens = await self.tokenizer.encode(negative_prompt, add_special_tokens=True)
+        prompt_tokens = StableDiffusionModel._adjust_tokens(prompt_tokens)
+        negative_prompt_tokens = StableDiffusionModel._adjust_tokens(negative_prompt_tokens)
         with torch.no_grad():
             prompt_embeds = self.text_encoder(prompt_tokens["input_ids"].to(device))[0]
             negative_prompt_embeds = self.text_encoder(negative_prompt_tokens["input_ids"].to(device))[0]
@@ -63,7 +57,7 @@ class StableDiffusionModel:
         latents = latents * self.scheduler.init_noise_sigma # supposedly crucial for SD v1.x
         return Tensor.from_numpy(latents)
 
-    def execute(
+    async def execute(
         self,
         prompt: str,
         negative_prompt: str,
@@ -74,7 +68,7 @@ class StableDiffusionModel:
     ):
         batch_size = 1
         # 1. Encode prompt
-        prompt_embeds_np, negative_prompt_embeds_np = self.encode_prompt(prompt, negative_prompt, self.device)
+        prompt_embeds_np, negative_prompt_embeds_np = await self.encode_prompt(prompt, negative_prompt, self.device)
         prompt_embeds_max = Tensor.from_numpy(prompt_embeds_np)
         negative_prompt_embeds_max = Tensor.from_numpy(negative_prompt_embeds_np)
         # 2. Prepare latents
@@ -112,3 +106,19 @@ class StableDiffusionModel:
             print("NaNs detected in VAE output!")
         image_max = Tensor.from_numpy(image.cpu().numpy())
         return image_max
+    
+    # TODO: come up with a better name for this method
+    def _adjust_tokens(tokens, padding="max_length", max_length=77, truncation=True):
+        """
+        Convert MAX TextTokenizer format to the requirement of the other models.
+        """
+        if padding != "max_length" or truncation != True:
+            raise NotImplementedError()
+
+        num_tokens = len(tokens)
+        tokens = torch.tensor(tokens)
+
+        return {
+            'input_ids': F.pad(tokens, (0, max_length - num_tokens)).reshape(1, -1),
+            'attention_mask': torch.cat([torch.ones(num_tokens, dtype=torch.long), torch.zeros(max_length - num_tokens, dtype=torch.long)]).reshape(1, -1),
+        }

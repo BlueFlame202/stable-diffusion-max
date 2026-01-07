@@ -9,6 +9,12 @@ from src.stable_diffusion import StableDiffusionModel
 from max.engine import InferenceSession
 from src.model_config import StableDiffusionConfig
 
+from max.pipelines.lib import (
+    TextTokenizer,
+)
+
+import asyncio
+
 # --- SDXLConfig and Diffusers config only; MAX PipelineConfig is NOT used for SDXL ---
 
 device = "cuda"
@@ -18,32 +24,33 @@ device = "cuda"
 # lambdalabs/sd-pokemon-diffusers
 # common-canvas/CommonCanvas-S-C # technically a different model family, but seems to give interesting and useful results!
 # common-canvas/CommonCanvas-S-NC
-pipe = StableDiffusionPipeline.from_pretrained("common-canvas/CommonCanvas-S-C", dtype=torch.float32)
+model_path = "common-canvas/CommonCanvas-S-C"
+pipe = StableDiffusionPipeline.from_pretrained(model_path, dtype=torch.float32)
 pipe = pipe.to(device)
 
-prompt = "A funny comic"
+prompt = "A scenic view of a lake"
 negative_prompt = "blurry"
 
-image = pipe(
-    prompt=prompt,
-    negative_prompt=negative_prompt,
-    height=512,
-    width=512,
-    num_inference_steps=50
-).images[0]
-image.save("output_huggingface_pipeline.png")
+# image = pipe(
+#     prompt=prompt,
+#     negative_prompt=negative_prompt,
+#     height=512,
+#     width=512,
+#     num_inference_steps=50
+# ).images[0]
+# image.save("output_huggingface_pipeline.png")
 
 # Extract UNet and VAE
 unet = pipe.unet
 vae = pipe.vae
 
-print("scheduler:", pipe.scheduler)
+print("text_encoder:", pipe.text_encoder)
 
 # Instantiate your SDXLModel with all other components
 model = StableDiffusionModel(
     text_encoder=pipe.text_encoder,
     # text_encoder_2=pipe.text_encoder, # initially was trying to do SDXL
-    tokenizer=pipe.tokenizer,
+    tokenizer=TextTokenizer("/home/ubuntu/CommonCanvas-S-C/tokenizer", trust_remote_code=True),
     # tokenizer_2=pipe.tokenizer, # initially was trying to do SDXL
     scheduler=pipe.scheduler,
     image_encoder=getattr(pipe, 'image_encoder', None),
@@ -57,13 +64,13 @@ model.vae = vae
 
 # Example inference
 if __name__ == "__main__":
-    result = model.execute(
+    result = asyncio.run(model.execute(
         prompt=prompt,
         negative_prompt=negative_prompt,
         height=512,
         width=512,
         num_inference_steps=50
-    )
+    ))
     print("Output tensor shape:", result.shape)  
       
     # Convert MAX tensor to numpy, then to PIL Image
