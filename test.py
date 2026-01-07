@@ -14,17 +14,24 @@ from src.model_config import StableDiffusionConfig
 device = "cuda"
 
 # Load the full pipeline from HuggingFace
-pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", dtype=torch.float32)
+# CompVis/stable-diffusion-v1-4
+# lambdalabs/sd-pokemon-diffusers
+# common-canvas/CommonCanvas-S-C # technically a different model family, but seems to give interesting and useful results!
+# common-canvas/CommonCanvas-S-NC
+pipe = StableDiffusionPipeline.from_pretrained("common-canvas/CommonCanvas-S-C", dtype=torch.float32)
 pipe = pipe.to(device)
 
+prompt = "A funny comic"
+negative_prompt = "blurry"
+
 image = pipe(
-    prompt="A beautiful landscape painting",
-    negative_prompt="blurry",
+    prompt=prompt,
+    negative_prompt=negative_prompt,
     height=512,
     width=512,
     num_inference_steps=50
 ).images[0]
-image.save("output_landscape_huggingface_pipeline.png")
+image.save("output_huggingface_pipeline.png")
 
 # Extract UNet and VAE
 unet = pipe.unet
@@ -51,8 +58,8 @@ model.vae = vae
 # Example inference
 if __name__ == "__main__":
     result = model.execute(
-        prompt="A beautiful landscape painting",
-        negative_prompt="blurry",
+        prompt=prompt,
+        negative_prompt=negative_prompt,
         height=512,
         width=512,
         num_inference_steps=50
@@ -76,5 +83,5 @@ if __name__ == "__main__":
     result_np = np.transpose(result_np, (1, 2, 0))  # CHW to HWC
     
     image = Image.fromarray(result_np)
-    image.save("output_landscape.png")
-    print("Image saved as output_landscape.png")
+    image.save("output.png")
+    print("Image saved as output.png")

@@ -1,7 +1,7 @@
 [workspace]
 authors = ["Aathreya Kadambi <aathreyakadambi@berkeley.edu>"]
 channels = ["https://conda.modular.com/max-nightly", "conda-forge"]
-name = "common-canvas-x-max"
+name = "stable-diffusion-x-max"
 platforms = ["linux-64"]
 version = "0.1.0"
 
@@ -17,4 +17,4 @@ pillow = "*"
 matplotlib = "*"
 max = ">=25.5.0.dev2025062815,<26"
 diffusers = ">=0.34.0,<0.35"
-pytorch = ">=2.0"
+pytorch = ">=2.6"

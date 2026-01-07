@@ -5,6 +5,20 @@ from tqdm import tqdm
 from transformers import CLIPTextModel, CLIPTextModelWithProjection, CLIPTokenizer, CLIPVisionModelWithProjection, CLIPImageProcessor
 from max.driver import Tensor
 
+class CLIPTokenizer:
+    def __init__():
+        # TODO
+        pass
+
+    def from_weights():
+        # TODO
+        pass
+
+    def __call__():
+        # TODO
+        pass
+
+
 class StableDiffusionModel:
     def __init__(
         self,
