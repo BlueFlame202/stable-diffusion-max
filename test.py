@@ -48,8 +48,7 @@ negative_prompt = "blurry"
 unet = pipe.unet
 vae = pipe.vae
 
-print("text_encoder:", pipe.text_encoder)
-max_embed = CLIPTextEncoder(
+text_encoder = CLIPTextEncoder(
     devices=[Accelerator()],
     hidden_dim=pipe.text_encoder.config.hidden_size,
     n_layers=pipe.text_encoder.config.num_hidden_layers,
@@ -58,13 +57,14 @@ max_embed = CLIPTextEncoder(
     max_len=pipe.text_encoder.config.max_position_embeddings,
     dtype=DType.float32
 )
-# print(max_embed.state_dict())
-max_embed.load_clip_state(pipe.text_encoder.state_dict())
-print("Loaded!")
+text_encoder.load_clip_state(pipe.text_encoder.state_dict())
+print("Loaded state dict from the pipe model!") # TODO: load from safetensors file instead of from the pipe model
+
+print(pipe.scheduler)
 
 # Instantiate your SDXLModel with all other components
 model = StableDiffusionModel(
-    text_encoder=max_embed,
+    text_encoder=text_encoder,
     # text_encoder_2=pipe.text_encoder, # initially was trying to do SDXL
     tokenizer=TextTokenizer("/home/ubuntu/CommonCanvas-S-C/tokenizer", trust_remote_code=True),
     # tokenizer_2=pipe.tokenizer, # initially was trying to do SDXL

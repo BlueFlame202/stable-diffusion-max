@@ -12,7 +12,6 @@ import torch
 
 from tqdm import tqdm
 
-import numpy as np
 from typing import Dict, Any
 
 class StableDiffusionModel:
@@ -51,14 +50,6 @@ class StableDiffusionModel:
         prompt_tokens = StableDiffusionModel._adjust_tokens(prompt_tokens)
         negative_prompt_tokens = StableDiffusionModel._adjust_tokens(negative_prompt_tokens)
         
-        # Old 
-        # with torch.no_grad():
-        #     prompt_embeds = self.text_encoder(torch.tensor(prompt_tokens).to(device))[0]
-        #     negative_prompt_embeds = self.text_encoder(torch.tensor(negative_prompt_tokens).to(device))[0]
-        # # Return as numpy for MAX
-        # return prompt_embeds.cpu().numpy(), negative_prompt_embeds.cpu().numpy()
-
-        # New
         prompt_embeds = self.text_encoder.execute(prompt_tokens)
         negative_prompt_embeds = self.text_encoder.execute(negative_prompt_tokens)
         return prompt_embeds, negative_prompt_embeds
@@ -79,11 +70,7 @@ class StableDiffusionModel:
     ):
         batch_size = 1
         # 1. Encode prompt
-        # prompt_embeds_np, negative_prompt_embeds_np = await self.encode_prompt(prompt, negative_prompt, self.device)
         prompt_embeds_max, negative_prompt_embeds_max = await self.encode_prompt(prompt, negative_prompt, self.device)
-        # prompt_embeds_max = Tensor.from_numpy(prompt_embeds_np)
-        # negative_prompt_embeds_max = Tensor.from_numpy(negative_prompt_embeds_np)
-        print(torch.from_dlpack(prompt_embeds_max))
         # 2. Prepare latents
         latents_max = self.prepare_latents(batch_size, 4, height // 8, width // 8, np.float32)
         # 3. Prepare timesteps
