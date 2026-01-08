@@ -29,7 +29,7 @@ device = "cuda"
 # common-canvas is technically a different model family, but seems to give interesting and useful results!
 # common-canvas/CommonCanvas-S-C
 # common-canvas/CommonCanvas-S-NC
-model_path = "common-canvas/CommonCanvas-S-NC"
+model_path = "CompVis/stable-diffusion-v1-4"
 pipe = StableDiffusionPipeline.from_pretrained(model_path, dtype=torch.float32)
 pipe = pipe.to(device)
 

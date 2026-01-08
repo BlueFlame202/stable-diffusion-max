@@ -13,7 +13,6 @@ from max.nn import (
     LayerNorm,
     Layer,
     LayerList,
-    TransformerBlock,
 )
 from max.nn.attention import MultiheadAttention, MHAMaskVariant
 from max.dtype import DType
