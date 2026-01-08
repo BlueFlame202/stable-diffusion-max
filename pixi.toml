@@ -8,13 +8,13 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-modular = ">=25.5.0.dev2025062815,<26"
+modular = ">25.7"
+max = "*"
 python = "3.10.*"
 numpy = "*"
 transformers = ">=4.53.0,<5"
 safetensors = "*"
 pillow = "*"
 matplotlib = "*"
-max = ">=25.5.0.dev2025062815,<26"
 diffusers = ">=0.34.0,<0.35"
 pytorch = ">=2.6"

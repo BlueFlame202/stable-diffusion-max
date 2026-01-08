@@ -6,8 +6,12 @@ from PIL import Image
 import numpy as np
 
 from src.stable_diffusion import StableDiffusionModel
-from max.engine import InferenceSession
+from src.clip import CLIPTextEncoder
 from src.model_config import StableDiffusionConfig
+
+from max.engine import InferenceSession
+from max.driver import CPU, Accelerator
+from max.dtype import DType
 
 from max.pipelines.lib import (
     TextTokenizer,
@@ -45,10 +49,22 @@ unet = pipe.unet
 vae = pipe.vae
 
 print("text_encoder:", pipe.text_encoder)
+max_embed = CLIPTextEncoder(
+    devices=[Accelerator()],
+    hidden_dim=pipe.text_encoder.config.hidden_size,
+    n_layers=pipe.text_encoder.config.num_hidden_layers,
+    n_heads=pipe.text_encoder.config.num_attention_heads,
+    vocab_size=pipe.text_encoder.config.vocab_size,
+    max_len=pipe.text_encoder.config.max_position_embeddings,
+    dtype=DType.float32
+)
+# print(max_embed.state_dict())
+max_embed.load_clip_state(pipe.text_encoder.state_dict())
+print("Loaded!")
 
 # Instantiate your SDXLModel with all other components
 model = StableDiffusionModel(
-    text_encoder=pipe.text_encoder,
+    text_encoder=max_embed,
     # text_encoder_2=pipe.text_encoder, # initially was trying to do SDXL
     tokenizer=TextTokenizer("/home/ubuntu/CommonCanvas-S-C/tokenizer", trust_remote_code=True),
     # tokenizer_2=pipe.tokenizer, # initially was trying to do SDXL

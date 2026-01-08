@@ -1,20 +1,24 @@
-from transformers import CLIPTextModel, CLIPTextModelWithProjection, CLIPTokenizer, CLIPVisionModelWithProjection, CLIPImageProcessor
+from transformers import CLIPTextModelWithProjection, CLIPVisionModelWithProjection, CLIPImageProcessor
 from max.driver import Tensor
 
 from max.pipelines.lib import (
     TextTokenizer,
 )
+from .clip import CLIPTextEncoder
 
+from numpy.typing import NDArray
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from tqdm import tqdm
+
+import numpy as np
+from typing import Dict, Any
 
 class StableDiffusionModel:
     def __init__(
         self,
-        text_encoder: CLIPTextModel = None,
+        text_encoder: CLIPTextEncoder = None,
         # text_encoder_2: CLIPTextModelWithProjection = None,
         tokenizer: TextTokenizer = None,
         # tokenizer_2: CLIPTokenizer = None,
@@ -33,9 +37,9 @@ class StableDiffusionModel:
         self.feature_extractor = feature_extractor
         self.force_zeros_for_empty_prompt = force_zeros_for_empty_prompt
         self.device = device
-        # Move models to the correct device
-        if self.text_encoder is not None:
-            self.text_encoder = self.text_encoder.to(self.device)
+        # TODO Move models to the correct device
+        # if self.text_encoder is not None:
+        #     self.text_encoder = self.text_encoder.to(self.device)
         # if self.text_encoder_2 is not None:
         #     self.text_encoder_2 = self.text_encoder_2.to(self.device)
         # unet/vae will be loaded from model_config.py
@@ -46,11 +50,18 @@ class StableDiffusionModel:
         negative_prompt_tokens = await self.tokenizer.encode(negative_prompt, add_special_tokens=True)
         prompt_tokens = StableDiffusionModel._adjust_tokens(prompt_tokens)
         negative_prompt_tokens = StableDiffusionModel._adjust_tokens(negative_prompt_tokens)
-        with torch.no_grad():
-            prompt_embeds = self.text_encoder(prompt_tokens["input_ids"].to(device))[0]
-            negative_prompt_embeds = self.text_encoder(negative_prompt_tokens["input_ids"].to(device))[0]
-        # Return as numpy for MAX
-        return prompt_embeds.cpu().numpy(), negative_prompt_embeds.cpu().numpy()
+        
+        # Old 
+        # with torch.no_grad():
+        #     prompt_embeds = self.text_encoder(torch.tensor(prompt_tokens).to(device))[0]
+        #     negative_prompt_embeds = self.text_encoder(torch.tensor(negative_prompt_tokens).to(device))[0]
+        # # Return as numpy for MAX
+        # return prompt_embeds.cpu().numpy(), negative_prompt_embeds.cpu().numpy()
+
+        # New
+        prompt_embeds = self.text_encoder.execute(prompt_tokens)
+        negative_prompt_embeds = self.text_encoder.execute(negative_prompt_tokens)
+        return prompt_embeds, negative_prompt_embeds
 
     def prepare_latents(self, batch_size, channels, height, width, dtype):
         latents = np.random.randn(batch_size, channels, height, width).astype(dtype)
@@ -68,9 +79,11 @@ class StableDiffusionModel:
     ):
         batch_size = 1
         # 1. Encode prompt
-        prompt_embeds_np, negative_prompt_embeds_np = await self.encode_prompt(prompt, negative_prompt, self.device)
-        prompt_embeds_max = Tensor.from_numpy(prompt_embeds_np)
-        negative_prompt_embeds_max = Tensor.from_numpy(negative_prompt_embeds_np)
+        # prompt_embeds_np, negative_prompt_embeds_np = await self.encode_prompt(prompt, negative_prompt, self.device)
+        prompt_embeds_max, negative_prompt_embeds_max = await self.encode_prompt(prompt, negative_prompt, self.device)
+        # prompt_embeds_max = Tensor.from_numpy(prompt_embeds_np)
+        # negative_prompt_embeds_max = Tensor.from_numpy(negative_prompt_embeds_np)
+        print(torch.from_dlpack(prompt_embeds_max))
         # 2. Prepare latents
         latents_max = self.prepare_latents(batch_size, 4, height // 8, width // 8, np.float32)
         # 3. Prepare timesteps
@@ -116,9 +129,4 @@ class StableDiffusionModel:
             raise NotImplementedError()
 
         num_tokens = len(tokens)
-        tokens = torch.tensor(tokens)
-
-        return {
-            'input_ids': F.pad(tokens, (0, max_length - num_tokens)).reshape(1, -1),
-            'attention_mask': torch.cat([torch.ones(num_tokens, dtype=torch.long), torch.zeros(max_length - num_tokens, dtype=torch.long)]).reshape(1, -1),
-        }
+        return np.pad(np.array(tokens), (0, max_length - num_tokens)).reshape(1, -1)
