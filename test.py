@@ -26,9 +26,10 @@ device = "cuda"
 # Load the full pipeline from HuggingFace
 # CompVis/stable-diffusion-v1-4
 # lambdalabs/sd-pokemon-diffusers
-# common-canvas/CommonCanvas-S-C # technically a different model family, but seems to give interesting and useful results!
+# common-canvas is technically a different model family, but seems to give interesting and useful results!
+# common-canvas/CommonCanvas-S-C
 # common-canvas/CommonCanvas-S-NC
-model_path = "common-canvas/CommonCanvas-S-C"
+model_path = "common-canvas/CommonCanvas-S-NC"
 pipe = StableDiffusionPipeline.from_pretrained(model_path, dtype=torch.float32)
 pipe = pipe.to(device)
 
@@ -60,8 +61,6 @@ text_encoder = CLIPTextEncoder(
 text_encoder.load_clip_state(pipe.text_encoder.state_dict())
 print("Loaded state dict from the pipe model!") # TODO: load from safetensors file instead of from the pipe model
 
-print(pipe.scheduler)
-
 # Instantiate your SDXLModel with all other components
 model = StableDiffusionModel(
     text_encoder=text_encoder,
@@ -69,14 +68,12 @@ model = StableDiffusionModel(
     tokenizer=TextTokenizer("/home/ubuntu/CommonCanvas-S-C/tokenizer", trust_remote_code=True),
     # tokenizer_2=pipe.tokenizer, # initially was trying to do SDXL
     scheduler=pipe.scheduler,
-    image_encoder=getattr(pipe, 'image_encoder', None),
-    feature_extractor=getattr(pipe, 'feature_extractor', None),
-    force_zeros_for_empty_prompt=True,
     device=device
 )
 # Set unet and vae as attributes
 model.unet = unet
 model.vae = vae
+print(unet)
 
 # Example inference
 if __name__ == "__main__":

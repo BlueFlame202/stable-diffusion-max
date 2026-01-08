@@ -18,9 +18,9 @@ class StableDiffusionModel:
     def __init__(
         self,
         text_encoder: CLIPTextEncoder = None,
-        # text_encoder_2: CLIPTextModelWithProjection = None,
+        text_encoder_2: CLIPTextModelWithProjection = None,
         tokenizer: TextTokenizer = None,
-        # tokenizer_2: CLIPTokenizer = None,
+        tokenizer_2: TextTokenizer = None,
         scheduler=None,
         image_encoder: CLIPVisionModelWithProjection = None,
         feature_extractor: CLIPImageProcessor = None,
@@ -28,19 +28,15 @@ class StableDiffusionModel:
         device: str = "cuda",
     ):
         self.text_encoder = text_encoder
-        # self.text_encoder_2 = text_encoder_2
+        self.text_encoder_2 = text_encoder_2 # TODO: for future, SD2
         self.tokenizer = tokenizer
-        # self.tokenizer_2 = tokenizer_2
+        self.tokenizer_2 = tokenizer_2 # TODO: for future, SD2
         self.scheduler = scheduler
-        self.image_encoder = image_encoder
-        self.feature_extractor = feature_extractor
-        self.force_zeros_for_empty_prompt = force_zeros_for_empty_prompt
+        self.image_encoder = image_encoder # TODO: for future
+        self.feature_extractor = feature_extractor # TODO: for future
+        self.force_zeros_for_empty_prompt = force_zeros_for_empty_prompt # TODO: for future
         self.device = device
-        # TODO Move models to the correct device
-        # if self.text_encoder is not None:
-        #     self.text_encoder = self.text_encoder.to(self.device)
-        # if self.text_encoder_2 is not None:
-        #     self.text_encoder_2 = self.text_encoder_2.to(self.device)
+        
         # unet/vae will be loaded from model_config.py
 
     async def encode_prompt(self, prompt, negative_prompt, device):

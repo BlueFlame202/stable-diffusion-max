@@ -100,6 +100,7 @@ class CLIPTextEncoder(Module): # if we extend Transformer, we would have to rewr
         self.dtype=dtype
         self.devices=devices
         self.max_len=max_len
+        self.n_layers = n_layers
 
         # compare to transformers package implementation in CLIPTextEmbeddings
         self.token_embedding = Embedding(vocab_size=vocab_size, hidden_dim=hidden_dim, dtype=dtype, device=devices[0])
@@ -148,58 +149,31 @@ class CLIPTextEncoder(Module): # if we extend Transformer, we would have to rewr
         """
         Map HuggingFace CLIPTextModel weights to this module.
         """
-        new_sd = CLIPTextEncoder._convert_clip_state_dict(hf_state)
+        new_sd = self._convert_clip_state_dict(hf_state)
         self.load_state_dict(new_sd)
 
     # for loading state dict from a huggingface model
-    def _convert_clip_state_dict(hf_state: dict[str, np.ndarray]) -> dict[str, WeightData]:
+    def _convert_clip_state_dict(self, hf_state: dict[str, np.ndarray]) -> dict[str, WeightData]:
         new_sd = {}
-        for hf_name, arr in hf_state.items():
-            arr = arr.cpu().numpy()
-            if hf_name.startswith("text_model.embeddings.token_embedding.weight"):
-                new_sd["token_embedding.weight"] = WeightData.from_numpy(arr, name="token_embedding.weight")
-            elif hf_name.startswith("text_model.embeddings.position_embedding.weight"):
-                new_sd["pos_embedding.weight"] = WeightData.from_numpy(arr, name="pos_embedding.weight")
-            elif hf_name.startswith(f"text_model.encoder.layers"): 
-                for i in range(23):
-                    if hf_name.startswith(f"text_model.encoder.layers.{i}.self_attn"):
-                        for piece in [ "q_proj", "k_proj", "v_proj", "out_proj" ]:
-                            if hf_name.startswith(f"text_model.encoder.layers.{i}.self_attn.{piece}.weight"):
-                                if piece == "out_proj": piece = "o_proj"
-                                new_sd[f"layers.{i}.self_attn.{piece}.weight"] = WeightData.from_numpy(arr, name=f"layers.{i}.self_attn.{piece}.weight")
-                                break
-                            elif hf_name.startswith(f"text_model.encoder.layers.{i}.self_attn.{piece}.bias"):
-                                if piece == "out_proj": piece = "o_proj"
-                                new_sd[f"layers.{i}.self_attn.{piece}.bias"] = WeightData.from_numpy(arr, name=f"layers.{i}.self_attn.{piece}.bias")
-                                break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.layer_norm1.weight"):
-                        new_sd[f"layers.{i}.input_layernorm.weight"] = WeightData.from_numpy(arr, name=f"layers.{i}.input_layernorm.weight")
-                        break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.layer_norm1.bias"):
-                        new_sd[f"layers.{i}.input_layernorm.bias"] = WeightData.from_numpy(arr, name=f"layers.{i}.input_layernorm.bias")
-                        break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.mlp.fc1.weight"):
-                        new_sd[f"layers.{i}.mlp.fc1.fc1.weight"] = WeightData.from_numpy(arr, name=f"layers.{i}.mlp.fc1.fc1.weight")
-                        break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.mlp.fc1.bias"):
-                        new_sd[f"layers.{i}.mlp.fc1.fc1.bias"] = WeightData.from_numpy(arr, name=f"layers.{i}.mlp.fc1.fc1.bias")
-                        break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.mlp.fc2.weight"):
-                        new_sd[f"layers.{i}.mlp.fc2.fc2.weight"] = WeightData.from_numpy(arr, name=f"layers.{i}.mlp.fc2.fc2.weight")
-                        break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.mlp.fc2.bias"):
-                        new_sd[f"layers.{i}.mlp.fc2.fc2.bias"] = WeightData.from_numpy(arr, name=f"layers.{i}.mlp.fc2.fc2.bias")
-                        break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.layer_norm2.weight"):
-                        new_sd[f"layers.{i}.post_attention_layernorm.weight"] = WeightData.from_numpy(arr, name=f"layers.{i}.post_attention_layernorm.weight")
-                        break
-                    elif hf_name.startswith(f"text_model.encoder.layers.{i}.layer_norm2.bias"):
-                        new_sd[f"layers.{i}.post_attention_layernorm.bias"] = WeightData.from_numpy(arr, name=f"layers.{i}.post_attention_layernorm.bias")
-                        break
-            elif hf_name.startswith(f"text_model.final_layer_norm.weight"):
-                new_sd["final_norm.weight"] =  WeightData.from_numpy(arr, name="final_norm.weight")
-            elif hf_name.startswith(f"text_model.final_layer_norm.bias"):
-                new_sd["final_norm.bias"] =  WeightData.from_numpy(arr, name="final_norm.bias")
+
+        CLIPTEXTENCODER_SAFETENSOR_MAP: dict[str, str] = {
+            "text_model.embeddings.": "",
+            "position_embedding": "pos_embedding",
+            "text_model.final_layer_norm.": "final_norm."
+        } | \
+        { f"text_model.encoder.layers.{i}.self_attn.out_proj.": f"layers.{i}.self_attn.o_proj." for i in range(self.n_layers) } | \
+        { f"text_model.encoder.layers.{i}.self_attn.": f"layers.{i}.self_attn." for i in range(self.n_layers) } | \
+        { f"text_model.encoder.layers.{i}.mlp.fc1.": f"layers.{i}.mlp.fc1.fc1." for i in range(self.n_layers) } | \
+        { f"text_model.encoder.layers.{i}.mlp.fc2.": f"layers.{i}.mlp.fc2.fc2." for i in range(self.n_layers) } | \
+        { f"text_model.encoder.layers.{i}.mlp.fc.": f"layers.{i}.mlp.fc1.fc1." for i in range(self.n_layers) } | \
+        { f"text_model.encoder.layers.{i}.layer_norm1.":  f"layers.{i}.input_layernorm." for i in range(self.n_layers) } | \
+        { f"text_model.encoder.layers.{i}.layer_norm2.":  f"layers.{i}.post_attention_layernorm." for i in range(self.n_layers) }
+
+        for weight_name, arr in hf_state.items():
+            max_name = weight_name
+            for before, after in CLIPTEXTENCODER_SAFETENSOR_MAP.items():
+                max_name = max_name.replace(before, after)
+            new_sd[max_name] = WeightData.from_numpy(arr.cpu().numpy(), name=max_name)
         return new_sd
 
     def _build_graph(self):
